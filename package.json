@@ -10,13 +10,24 @@
     "type": "git",
     "url": "https://github.com/roninliu/gulp-spriter.git"
   },
+  "dependencies": {
+    "spritesmith": "^0.7.1"
+  },
+  "devDependencies": {
+    "gulp": "^3.8.5",
+    "gm":"*"
+  },
   "keywords": [
     "gulpplugin",
     "sprite",
     "css",
     "autospirte"
   ],
-  "author": "roninliu",
+  "author": {
+    "name": "ronin",
+    "email": "roninliu@foxmail.com",
+    "url": "https://github.com/roninliu"
+  },
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/roninliu/gulp-spriter/issues"
