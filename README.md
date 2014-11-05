@@ -1,7 +1,9 @@
 GULP CSS Sprite
 ===============
 
-gulp-spriter
--------------
+gulp-spriter（gulp css自动合并雪碧图）
+---------------------------------------
 
-gulp css自动合并雪碧图
+###简介
+
+
