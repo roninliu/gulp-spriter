@@ -1,6 +1,6 @@
 {
   "name": "gulp-spriter",
-  "version": "0.0.1",
+  "version": "0.0.4",
   "description": "the plugin to help UI Engineer creating css sprite",
   "main": "index.js",
   "scripts": {
@@ -11,7 +11,9 @@
     "url": "https://github.com/roninliu/gulp-spriter.git"
   },
   "dependencies": {
-    "spritesmith": "^0.7.1"
+    "gulp-util": "^3.0.1",
+    "through2": "^0.6.1",
+    "spritesmith":"^0.20.0"
   },
   "devDependencies": {
     "gulp": "^3.8.5",
