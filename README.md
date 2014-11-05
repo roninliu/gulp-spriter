@@ -1,4 +1,7 @@
-gulp-spriter
-============
+GULP CSS Sprite
+===============
 
-gulp 雪碧图
+gulp-spriter
+-------------
+
+gulp css自动合并雪碧图

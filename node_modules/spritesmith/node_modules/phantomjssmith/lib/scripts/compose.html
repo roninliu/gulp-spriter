@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Compose images</title>
+    <script src="async.js"></script>
+  </head>
+  <body>
+    <canvas id="canvas"></canvas>
+    <script>
+      window.processCommand = function (params) {
+        // Grab the canvas and its context
+        var canvas = document.getElementById('canvas'),
+            context = canvas.getContext('2d');
+
+        // Set the canvas dimensions
+        canvas.width = params.width;
+        canvas.height = params.height;
+
+        // Load the images in parallel
+        var imageObjs = params.images;
+        async.each(imageObjs, function (imageObj, cb) {
+          // Create an image and specify the source
+          var img = new Image();
+          img.src = imageObj.img._urlpath;
+
+          // Save the image for later
+          imageObj._img = img;
+
+          // Once the image loads, callback with it
+          img.onload = function () {
+            cb(null, img);
+          };
+
+          // If there is an error, callback with it
+          img.onerror = function (err) {
+            cb(err);
+          };
+        }, function imagesLoaded (err) {
+          // If there was an error, throw it
+          if (err) {
+            console.error('Error loading image ', err);
+            throw err;
+          }
+
+          // Draw the images on the canvas
+          imageObjs.forEach(function drawImage (img) {
+            context.drawImage(img._img, img.x, img.y);
+          });
+
+          // Capture the rgba pixels and save it for later
+          // DEV: We cannot use `.toDataURL` because it is bloating 5kB images to 120kB.
+          // https://github.com/Ensighten/grunt-spritesmith/issues/46
+          // DEV: We used to coerce this to a string to save size but Windows started having trouble
+          var data = context.getImageData(0, 0, params.width, params.height).data;
+          window.retStr = JSON.stringify([].slice.call(data));
+        });
+      };
+    </script>
+  </body>
+</html>
