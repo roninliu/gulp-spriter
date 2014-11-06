@@ -34,12 +34,15 @@ gulpfile配置文件中增加task，如下：
 gulp.task("css",["clean"],function(){
   return gulp.src("./src/css/xxx.css")
          .pipe(spriter({
-            spriteName:"sprites.png",
-            inSpritePath:"./src/slice",
-            outSpritePath:"./build/spripte"
+            outname:"test.png",
+            inpath:"./src/slice",
+            outpath:"./build/tests"
           }))
          .pipe(gulp.dest('./build/css'))
 })
 ```
 
-(注：该版本还不完善，暂勿使用于正式环境)
+### 参数
+* outname:[string] 必须，设置输出的雪碧图名称
+* inpath：[string] 必须，切片文件存放位置，基于根目录
+* outpath：[string] 必须，输出的雪碧图位置

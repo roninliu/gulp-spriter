@@ -2,17 +2,236 @@
 /**
  * [gulp-spriter 雪碧图工具]
  * @param  {[object]} opt [自定义参数]
+ * opt = {
+ *     outname:"sprite.png",
+ *     inpath:"./src/slice",
+ *     outpath:"./build/sprite"
+ * }
  */
 var PLUGIN_NAME = "gulp-spriter";
 var through = require('through2');
 var gutil = require('gulp-util');
 var fs = require('fs-extra');
 var spritesmith = require('spritesmith');
-var fileExists = require('file-exists')
+var fileExists = require('file-exists');
 
 
 module.exports = function(opt){
-    var opts = opt||{};
+    /**
+     * [默认参数：必须]
+     * outname:输入的雪碧图文件名
+     * inpath：输入的切片文件位置
+     * outpath：输出雪碧图位置
+     */
+    var _outSpriteName = opt.outname;
+    var _inSlicePath = opt.inpath;
+    var _outSpritePath = opt.outpath;
+    var _rootPath = _inSlicePath.slice(0,_inSlicePath.lastIndexOf("/"));
+
+    /**
+     * [_getSpritesmithConfig 获取spritesmith的配置]
+     * @param  {[array]} imagePath [相对路径的图片数组]
+     * @return {[object]}          [spritesmith的配置]
+     */
+    var _getSpritesmithConfig = function(imagePath){
+        var _config = {
+            src:imagePath,
+            engine:"gm",
+            format:"png",
+            algorithm:"binary-tree"
+        }
+        return _config;
+    }
+
+    /**
+     * [_getSliceObjectHandler 根据CSS文件获取图片列表和对应的样式文件]
+     * @param  {[string]} filestring [转换为string的css文件buffer]
+     * @return {[object]}            [返回object{img:[],list:[]}]
+     */
+    var _getSliceObjectHandler = function(filestring){
+        var _sliceObject;
+        var _regex = new RegExp('background-image:[\\s]*url\\(["\']?(?!http[s]?|/)[^;]*?(slice[\\w\\d\\s!./\\-\\_@]*\\.[\\w?#]+)["\']?\\)[^;}]*;?', 'ig');
+        var _sliceCodeList = filestring.match(_regex);
+        var _pathToResource;
+        var _sliceImgUrlList = [];
+        var _sliceList = [];
+        if(_sliceCodeList !== null){
+            for(var x=0;x<_sliceCodeList.length;x++){
+                _pathToResource = _sliceCodeList[x].replace(_regex,"$1");
+                _sliceImgUrlList[x] = _pathToResource;
+                _sliceList[_pathToResource] =  _sliceCodeList[x];
+            }
+        }
+        _sliceObject = {
+            img:_sliceImgUrlList,
+            list:_sliceList
+        }
+        return _sliceObject;
+    }
+
+    /**
+     * [_getSliceImagePathHandler 根据css中获得的切片图片获取图片对应的相对路径]
+     * @param  {[array]} sliceList [css文件中得到slice图片数组]
+     * @return {[array]}           [返回相对路径的图片数组]
+     */
+    var _getSliceImagePathHandler = function(sliceList){
+        var _sliceImgPathUrl = [];
+        if(sliceList.length > 0){
+            for(var y=0;y<sliceList.length;y++){
+                _sliceImgPathUrl[y] = _rootPath+"/"+ sliceList[y];
+            }
+        }
+        return _sliceImgPathUrl;
+    }
+    /**
+     * [_createSpriteHandler 创建雪碧图]
+     * @param  {[type]}   config   [spritesmith的配置]
+     * @param  {Function} callback [创建图片成功后调用函数，用于update样式]
+     * @return {[void]}            [无]
+     */
+    var _createSpriteHandler = function(config,callback){
+        spritesmith(config,function(error,result){
+            if(error){
+                gutil.log("[Error]",new gutil.PluginError(PLUGIN_NAME, error))
+            }else{
+                if(callback !== undefined){
+                    var _resultPosition = result.coordinates;
+                    fs.writeFileSync(_outSpriteName,result.image,"binary");
+                    fs.move(_outSpriteName,_outSpritePath +"/"+ _outSpriteName,function(err){
+                        if(err){
+                            gutil.log("[Error]",new gutil.PluginError(PLUGIN_NAME, err))
+                        }else{
+                            gutil.log("[Successful] [Done] "+ _outSpriteName +" Create Successful")
+                        }
+                    });
+                    callback(_resultPosition);
+                }else{
+                    gutil.log("[Error] Create Sprite callback is required!");
+                }
+            }
+        })
+    }
+    /**
+     * [_updateStyleHandler 更新样式表string]
+     * @param  {[array]} sliceCode [合并后图片所在的位置以及对应的样式代码]
+     * @param  {[type]} data      [原css文件转换string的对象]
+     * @return {[type]}           [返回更新后的样式文件string]
+     */
+    var _updateStyleHandler = function(sliceCode,data){
+        var _slice;
+        for(var key in sliceCode){
+            _slice = sliceCode[key];
+            var _code = "background-image: url(..";
+                _code += _outSpritePath.slice(_outSpritePath.lastIndexOf("/"),_outSpritePath.length);
+                _code += "/";
+                _code += _outSpriteName;
+                _code += ");";
+                _code += "background-position: -";
+                _code += _slice.x;
+                _code += "px -";
+                _code += _slice.y;
+                _code += "px;";
+            data = data.replace(_slice.code,_code);
+        }
+        return data;
+    }
+    /**
+     * [_getRetinaClassSliceHandler 获取retina的图片和对应的class]
+     * @param  {[string]} data [样式文件转换为string流的数据]
+     * @return {[object]}      [返回retina图片数组和class数组]
+     */
+    var _getRetinaClassSliceHandler = function(data){
+        var _retinaObject;
+        var _retinaImageList = [];
+        var _retinaSliceList =[];
+        var _regex = new RegExp('background-image:[\\s]*url\\(["\']?(?!http[s]?|/)[^;]*?(slice[\\w\\d\\s!./\\-\\_@]*\\.[\\w?#]+)["\']?\\)[^;}]*;?', 'ig');
+        var _data = data.match(_regex);
+        var _rregex = new RegExp('.*(slice\\/[\\w\\d\\s!./\\-\\_@]*)\\.([\\w?#]+)["\']?\\)[^;}]*;?', 'ig');
+        RegExp.escape = function (s) {
+            return s.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')
+        };
+        for(var i=0;i<_data.length;i++){
+            var _slice = _data[i];
+            var _retinaSlice = _slice.replace(_rregex,"$1")+"@2x."+_slice.replace(_rregex,"$2");
+            var _retinaSlicePath = _rootPath +"/"+_retinaSlice;
+            if(fileExists(_retinaSlicePath)){
+                var _regexClassNameString = '(\\.?[^}]*?)\\s?{\\s?[^}]*?' + RegExp.escape(_slice);
+                var _regexClassName = new RegExp(_regexClassNameString, 'ig');
+                var _classNameResult = data.match(_regexClassName);
+                var _className = _classNameResult[0].replace(_regexClassName, '$1');
+                var _retinaItem = new Object();
+                _retinaImageList.push(_retinaSlicePath);
+                _retinaItem.className = _className;
+                _retinaSliceList[_retinaSlicePath] = _retinaItem;
+            }
+        }
+        _retinaObject = {
+            slice:_retinaImageList,
+            slicekey:_retinaSliceList
+        }
+        return _retinaObject;
+    }
+    /**
+     * [_createRetinaSpriteHandler 创建retina雪碧图]
+     * @param  {[object]}   config   [spritesmith的配置]
+     * @param  {Function} callback [图片创建成功返回值]
+     * @return {[void]}            [无]
+     */
+    var _createRetinaSpriteHandler = function(config,callback){
+        spritesmith(config,function(error,result){
+            if(error){
+                 gutil.log("[Error]",new gutil.PluginError(PLUGIN_NAME, error))
+            }else{
+                if(callback !== undefined){
+                    var _retinaSprite = _outSpriteName.replace(".png","@2x.png");
+                    fs.writeFileSync(_retinaSprite,result.image,"binary");
+                    fs.move(_retinaSprite,_outSpritePath+"/"+_retinaSprite,function(err){
+                        if(err){
+                            gutil.log("[Error]",new gutil.PluginError(PLUGIN_NAME, err))
+                        }else{
+                            gutil.log("[Successful] [Done] "+ _retinaSprite +" Create Successful");
+                        }
+                    })
+                    callback(result);
+                }else{
+                    gutil.log("[Error] Create Retina Sprite callback is required!");
+                }
+            }
+        })
+    }
+    /**
+     * [_updateRetinaStyleHandler 更新retina样式支持]
+     * @param  {[string]} css          [增加过的普通雪碧图的样式]
+     * @param  {[object]} retinaobject [retina相关的样式雪碧图]
+     * @param  {[object]} properties   [雪碧图的信息]
+     * @return {[string]}              [返回增加后的样式]
+     */
+    var _updateRetinaStyleHandler = function(css,retinaobject,properties){
+        var _tmpSlice = retinaobject.slicekey;
+        var _retinaCSSCode = "";
+        var _sprite ;
+            _retinaCSSCode +='\n\n@media only screen and (-webkit-min-device-pixel-ratio: 1.5),only screen and (min--moz-device-pixel-ratio: 1.5),only screen and (min-resolution: 240dpi){';
+            for(var key in _tmpSlice){
+                _sprite = _tmpSlice[key].code;
+                _retinaCSSCode += _tmpSlice[key].className;
+                _retinaCSSCode += "{background-image:url(..";
+                _retinaCSSCode += _outSpritePath.slice(_outSpritePath.lastIndexOf("/"),_outSpritePath.length);
+                _retinaCSSCode += "/";
+                _retinaCSSCode += _outSpriteName.replace(".png","@2x.png")+");";
+                _retinaCSSCode += "background-position: -";
+                _retinaCSSCode += (_sprite.x) / 2;
+                _retinaCSSCode += "px -";
+                _retinaCSSCode += (_sprite.y) / 2;
+                _retinaCSSCode += "px;background-size:";
+                _retinaCSSCode += (properties.width) / 2 + 'px;}';
+            }
+            _retinaCSSCode += '\n}\n';
+        css = css + _retinaCSSCode;
+        return css;
+    }
+    /**
+     * 插件具体干事情的在这里
+     */
     return through.obj(function(file, encoding, cb){
         if (file.isNull()) {
             this.push(file);
@@ -22,146 +241,38 @@ module.exports = function(opt){
             this.emit("[Error]",new gutil.PluginError(PLUGIN_NAME, 'Streaming not supported'))
             return cb();
         }
-
-        var _sliceCodeList = [],
-            _sliceImgUrlList = [],
-            _sliceCode = [],
-            _sliceList = [],
-            _that = this;
-
-        var _regex = new RegExp('background-image:[\\s]*url\\(["\']?(?!http[s]?|/)[^;]*?(slice[\\w\\d\\s!./\\-\\_@]*\\.[\\w?#]+)["\']?\\)[^;}]*;?', 'ig');
-        var _data = file.contents.toString()
-        var _sliceCodeList = _data.match(_regex);
-        var _pathToResource;
-
-        if(_sliceCodeList !== null){
-            for(var x=0;x<_sliceCodeList.length;x++){
-                _pathToResource = _sliceCodeList[x].replace(_regex,"$1");
-                _sliceImgUrlList[x] = _pathToResource;
-                _sliceList[_pathToResource] =  _sliceCodeList[x];
-            }
-        }
-        if(_sliceImgUrlList.length > 0){
-            for(var y=0;y<_sliceImgUrlList.length;y++){
-                _sliceImgUrlList[y] = opts.inSpritePath + _sliceImgUrlList[y].slice(_sliceImgUrlList[y].indexOf("/"));
-            }
-        }
-
-
-
-        var _options = {
-            "src":_sliceImgUrlList,
-            "engine":"gm",
-            'format': 'png',
-            'algorithm': 'binary-tree'
-        }
-        spritesmith(_options,function(error,result){
-            var _resultPosition = result.coordinates;
-            //console.log(_resultPosition);
-            fs.writeFileSync(opts.spriteName,result.image,"binary");
-            fs.move("./"+opts.spriteName,opts.outSpritePath+"/"+opts.spriteName,function(err){
-                if(err){
-                    _that.emit("[Error]",new gutil.PluginError(PLUGIN_NAME, err))
-                    return cb();
-                }
-            })
-            for(var key in _resultPosition){
+        var _that = this;
+        var _cssString;
+        var _sliceObject = _getSliceObjectHandler(String(file.contents));
+        var _sliceImagePath = _getSliceImagePathHandler(_sliceObject.img);
+        var _config =_getSpritesmithConfig(_sliceImagePath);
+        _createSpriteHandler(_config,function(position){
+            var _sliceCode = [];
+            for(var key in position){
                 var newKey = key;
-                if(opts.inSpritePath != "./"){
-                    newKey = key.slice(opts.inSpritePath.lastIndexOf("/")+1,key.length);
+                if(_rootPath != "./"){
+                    newKey = key.replace(_rootPath + "/","");
                 }
-                _sliceCode[newKey] = _resultPosition[key];
-                _sliceCode[newKey].sprite = _sliceList[newKey];
+                _sliceCode[newKey] = position[key];
+                _sliceCode[newKey].code = _sliceObject.list[newKey];
             }
-            replaceCSSCode();
-            //console.log(_sliceList);
-            //console.log(_sliceCode);
-        })
-        var replaceCSSCode = function(){
-            var _slice;
-            for(var key in _sliceCode){
-                _slice = _sliceCode[key];
-                var _code = "background-image: url(.." + opts.outSpritePath.slice(opts.outSpritePath.lastIndexOf("/"),opts.outSpritePath.length) +"/"+ opts.spriteName+");";
-                _code += "background-position: -"+ _slice.x + "px -" + _slice.y + "px;";
-                _data = _data.replace(_slice.sprite,_code);
-            }
-            createRetinaSprite();
-        }
-        var createRetinaSprite = function(){
-            var _source = file.contents.toString();
-            var _retinaImgList = [],
-                _retinaSliceList = [],
-                _retinaCode =[];
-
-            //console.log(_source);
-            var regex = new RegExp('.*(slice\\/[\\w\\d\\s!./\\-\\_@]*)\\.([\\w?#]+)["\']?\\)[^;}]*;?', 'ig');
-            //var regex = new RegExp('.*slice\\/(.*)\\.(\\w*)', 'ig');
-            RegExp.escape = function (s) {
-                return s.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')
-            };
-            for(var i=0;i<_sliceCodeList.length;i++){
-                var _key = _sliceCodeList[i];
-                var retinaIcon = _key.replace(regex,"$1")+"@2x."+_key.replace(regex,"$2");
-                var retinaIconPath = opts.inSpritePath + retinaIcon.slice(retinaIcon.indexOf("/"),retinaIcon.length);
-                //console.log(retinaIconPath);
-                if(fileExists(retinaIconPath)){
-                    var regexClassNameString = '(\\.?[^}]*?)\\s?{\\s?[^}]*?' + RegExp.escape(_key);
-                    var regexClassName = new RegExp(regexClassNameString, 'ig');
-                    var classNameResult = _source.match(regexClassName);
-                    var className = classNameResult[0].replace(regexClassName, '$1');
-                    var retinaItem = new Object();
-                    _retinaImgList.push(retinaIconPath);
-                    retinaItem.className = className;
-                    _retinaSliceList[retinaIconPath] = retinaItem;
+            _cssString = _updateStyleHandler(_sliceCode,String(file.contents));
+        });
+        var _retinaObject =_getRetinaClassSliceHandler(String(file.contents));
+        var _retinaConfig = _getSpritesmithConfig(_retinaObject.slice);
+        _createRetinaSpriteHandler(_retinaConfig,function(result){
+            var _spriteProperties = result.properties;
+            if(_spriteProperties.width % 2 == 1){
+                gutil.log("[Error] : @2x slice image size must be even number, Please check it!");
+            }else{
+                for(var key in result.coordinates){
+                    _retinaObject.slicekey[key].code = result.coordinates[key];
                 }
             }
-            if(_retinaImgList.length >0){
-                 var _retinaOptions = {
-                    "src":_retinaImgList,
-                    "engine":"gm",
-                    'format': 'png',
-                    'algorithm': 'binary-tree'
-                }
-                spritesmith(_retinaOptions,function(err,result){
-                    var _resultPosition = result.coordinates;
-                    var _resutlProperties = result.properties;
-                    //console.log(_resutlProperties);
-                    var _spriteRetina =opts.spriteName.slice(opts.spriteName.indexOf("."),opts.spriteName.length)+"@2x.png";
-                    fs.writeFileSync(_spriteRetina,result.image,"binary");
-                    fs.move("./"+_spriteRetina,opts.outSpritePath+"/"+_spriteRetina,function(err){
-                        if(err){
-                            _that.emit("[Error]",new gutil.PluginError(PLUGIN_NAME, err))
-                            return cb();
-                        }
-                    })
-                    for(var key in _resultPosition){
-                       _retinaSliceList[key].sprite = _resultPosition[key];
-                    }
-                    console.log(_retinaSliceList);
-                    createRetinaCode(_retinaSliceList,_resutlProperties);
-                })
-            }
-            
-           
-        }
-        var createRetinaCode = function(list,properties){
-            var _retinaCSSCode = "";
-            var img ;
-            _retinaCSSCode +='\n\n@media only screen and (-webkit-min-device-pixel-ratio: 1.5),only screen and (min--moz-device-pixel-ratio: 1.5),only screen and (min-resolution: 240dpi) \n{';
-            for(var key in list){
-                img = list[key].sprite;
-                _retinaCSSCode += list[key].className;
-                _retinaCSSCode += '{background-image:url(../'+opts.spriteName.slice(opts.spriteName.indexOf("."),opts.spriteName.length)+"@2x.png"+");";
-                _retinaCSSCode +='background-position: -' + (img.x) / 2 + 'px -' + (img.y) / 2 + 'px;background-size:' + (properties.width) / 2 + 'px;}';
-            }
-            _retinaCSSCode += '\n}\n';
-            var files = _data + _retinaCSSCode;
-             console.log(files);
-            file.contents = new Buffer(files);
-           
+            _cssString = _updateRetinaStyleHandler(_cssString,_retinaObject,_spriteProperties);
+            file.contents = new Buffer(_cssString);
             _that.push(file);
-            cb(); 
-        }
-        
+            cb();
+        })
     });
 };
