@@ -46,3 +46,7 @@ gulp.task("css",["clean"],function(){
 * outname:[string] 必须，设置输出的雪碧图名称
 * inpath：[string] 必须，切片文件存放位置，基于根目录
 * outpath：[string] 必须，输出的雪碧图位置
+
+
+### 实例
+具体使用方式可以参考examples对应的实例
