@@ -97,7 +97,7 @@ module.exports = function(opt){
                 if(callback !== undefined){
                     var _resultPosition = result.coordinates;
                     fs.writeFileSync(_outSpriteName,result.image,"binary");
-                    fs.move(_outSpriteName,_outSpritePath +"/"+ _outSpriteName,function(err){
+                    fs.move(_outSpriteName,_outSpritePath +"/"+ _outSpriteName,{clobber: true},function(err){
                         if(err){
                             gutil.log("[Error]",new gutil.PluginError(PLUGIN_NAME, err))
                         }else{
@@ -185,7 +185,7 @@ module.exports = function(opt){
                 if(callback !== undefined){
                     var _retinaSprite = _outSpriteName.replace(".png","@2x.png");
                     fs.writeFileSync(_retinaSprite,result.image,"binary");
-                    fs.move(_retinaSprite,_outSpritePath+"/"+_retinaSprite,function(err){
+                    fs.move(_retinaSprite,_outSpritePath+"/"+_retinaSprite,{clobber: true},function(err){
                         if(err){
                             gutil.log("[Error]",new gutil.PluginError(PLUGIN_NAME, err))
                         }else{
@@ -243,6 +243,7 @@ module.exports = function(opt){
         }
         var _that = this;
         var _cssString;
+        var _retinaCSSString;
         var _sliceObject = _getSliceObjectHandler(String(file.contents));
         var _sliceImagePath = _getSliceImagePathHandler(_sliceObject.img);
         var _config =_getSpritesmithConfig(_sliceImagePath);
@@ -257,22 +258,25 @@ module.exports = function(opt){
                 _sliceCode[newKey].code = _sliceObject.list[newKey];
             }
             _cssString = _updateStyleHandler(_sliceCode,String(file.contents));
-        });
-        var _retinaObject =_getRetinaClassSliceHandler(String(file.contents));
-        var _retinaConfig = _getSpritesmithConfig(_retinaObject.slice);
-        _createRetinaSpriteHandler(_retinaConfig,function(result){
-            var _spriteProperties = result.properties;
-            if(_spriteProperties.width % 2 == 1){
-                gutil.log("[Error] : @2x slice image size must be even number, Please check it!");
-            }else{
-                for(var key in result.coordinates){
-                    _retinaObject.slicekey[key].code = result.coordinates[key];
+            //console.log(_cssString);
+            var _retinaObject =_getRetinaClassSliceHandler(String(file.contents));
+            var _retinaConfig = _getSpritesmithConfig(_retinaObject.slice);
+            _createRetinaSpriteHandler(_retinaConfig,function(result){
+                var _spriteProperties = result.properties;
+                if(_spriteProperties.width % 2 == 1){
+                    gutil.log("[Error] : @2x slice image size must be even number, Please check it!");
+                }else{
+                    for(var key in result.coordinates){
+                        _retinaObject.slicekey[key].code = result.coordinates[key];
+                    }
                 }
-            }
-            _cssString = _updateRetinaStyleHandler(_cssString,_retinaObject,_spriteProperties);
-            file.contents = new Buffer(_cssString);
-            _that.push(file);
-            cb();
-        })
+                _retinaCSSString = _updateRetinaStyleHandler(_cssString,_retinaObject,_spriteProperties);
+                //console.log(_retinaCSSString);
+                file.contents = new Buffer(_retinaCSSString);
+                _that.push(file);
+                cb();
+            })
+        });
+
     });
 };
