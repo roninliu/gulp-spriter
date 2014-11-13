@@ -99,9 +99,9 @@ module.exports = function(opt){
                     fs.writeFileSync(_outSpriteName,result.image,"binary");
                     fs.move(_outSpriteName,_outSpritePath +"/"+ _outSpriteName,{clobber: true},function(err){
                         if(err){
-                            gutil.log("[Error]",new gutil.PluginError(PLUGIN_NAME, err))
+                            gutil.log(gutil.colors.red("[Error]"),new gutil.PluginError(PLUGIN_NAME, err))
                         }else{
-                            gutil.log("[Successful] [Done] "+ _outSpriteName +" Create Successful")
+                            gutil.log(gutil.colors.green("[Successful]"),gutil.colors.yellow("[Done]:"+ _outSpriteName +" Create Successful"))
                         }
                     });
                     callback(_resultPosition);
@@ -142,14 +142,15 @@ module.exports = function(opt){
      */
     var _getRetinaClassSliceHandler = function(data){
         var _retinaObject;
+        var _data = [];
         var _retinaImageList = [];
         var _retinaSliceList =[];
         var _regex = new RegExp('background-image:[\\s]*url\\(["\']?(?!http[s]?|/)[^;]*?(slice[\\w\\d\\s!./\\-\\_@]*\\.[\\w?#]+)["\']?\\)[^;}]*;?', 'ig');
-        var _data = data.match(_regex);
         var _rregex = new RegExp('.*(slice\\/[\\w\\d\\s!./\\-\\_@]*)\\.([\\w?#]+)["\']?\\)[^;}]*;?', 'ig');
         RegExp.escape = function (s) {
             return s.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')
         };
+        _data = data.match(_regex);
         for(var i=0;i<_data.length;i++){
             var _slice = _data[i];
             var _retinaSlice = _slice.replace(_rregex,"$1")+"@2x."+_slice.replace(_rregex,"$2");
@@ -187,14 +188,14 @@ module.exports = function(opt){
                     fs.writeFileSync(_retinaSprite,result.image,"binary");
                     fs.move(_retinaSprite,_outSpritePath+"/"+_retinaSprite,{clobber: true},function(err){
                         if(err){
-                            gutil.log("[Error]",new gutil.PluginError(PLUGIN_NAME, err))
+                            gutil.log(gutil.colors.red("[Error]"),new gutil.PluginError(PLUGIN_NAME, err))
                         }else{
-                            gutil.log("[Successful] [Done] "+ _retinaSprite +" Create Successful");
+                            gutil.log(gutil.colors.green("[Successful]"),gutil.colors.yellow("[Done]:"+ _retinaSprite +" Create Successful"));
                         }
                     })
                     callback(result);
                 }else{
-                    gutil.log("[Error] Create Retina Sprite callback is required!");
+                    gutil.log(gutil.colors.red("[Error] Create Retina Sprite callback is required!"));
                 }
             }
         })
@@ -277,6 +278,5 @@ module.exports = function(opt){
                 cb();
             })
         });
-
     });
 };
