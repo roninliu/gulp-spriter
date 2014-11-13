@@ -1,6 +1,6 @@
 {
   "name": "gulp-spriter",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "the plugin to help UI Engineer creating css sprite",
   "main": "index.js",
   "scripts": {

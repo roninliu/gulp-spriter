@@ -151,19 +151,21 @@ module.exports = function(opt){
             return s.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')
         };
         _data = data.match(_regex);
-        for(var i=0;i<_data.length;i++){
-            var _slice = _data[i];
-            var _retinaSlice = _slice.replace(_rregex,"$1")+"@2x."+_slice.replace(_rregex,"$2");
-            var _retinaSlicePath = _rootPath +"/"+_retinaSlice;
-            if(fileExists(_retinaSlicePath)){
-                var _regexClassNameString = '(\\.?[^}]*?)\\s?{\\s?[^}]*?' + RegExp.escape(_slice);
-                var _regexClassName = new RegExp(_regexClassNameString, 'ig');
-                var _classNameResult = data.match(_regexClassName);
-                var _className = _classNameResult[0].replace(_regexClassName, '$1');
-                var _retinaItem = new Object();
-                _retinaImageList.push(_retinaSlicePath);
-                _retinaItem.className = _className;
-                _retinaSliceList[_retinaSlicePath] = _retinaItem;
+        if(_data !== null){
+            for(var i=0;i<_data.length;i++){
+                var _slice = _data[i];
+                var _retinaSlice = _slice.replace(_rregex,"$1")+"@2x."+_slice.replace(_rregex,"$2");
+                var _retinaSlicePath = _rootPath +"/"+_retinaSlice;
+                if(fileExists(_retinaSlicePath)){
+                    var _regexClassNameString = '(\\.?[^}]*?)\\s?{\\s?[^}]*?' + RegExp.escape(_slice);
+                    var _regexClassName = new RegExp(_regexClassNameString, 'ig');
+                    var _classNameResult = data.match(_regexClassName);
+                    var _className = _classNameResult[0].replace(_regexClassName, '$1');
+                    var _retinaItem = new Object();
+                    _retinaImageList.push(_retinaSlicePath);
+                    _retinaItem.className = _className;
+                    _retinaSliceList[_retinaSlicePath] = _retinaItem;
+                }
             }
         }
         _retinaObject = {
