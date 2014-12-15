@@ -263,22 +263,28 @@ module.exports = function(opt){
             _cssString = _updateStyleHandler(_sliceCode,String(file.contents));
             //console.log(_cssString);
             var _retinaObject =_getRetinaClassSliceHandler(String(file.contents));
-            var _retinaConfig = _getSpritesmithConfig(_retinaObject.slice);
-            _createRetinaSpriteHandler(_retinaConfig,function(result){
-                var _spriteProperties = result.properties;
-                if(_spriteProperties.width % 2 == 1){
-                    gutil.log("[Error] : @2x slice image size must be even number, Please check it!");
-                }else{
-                    for(var key in result.coordinates){
-                        _retinaObject.slicekey[key].code = result.coordinates[key];
+            if(_retinaObject.slice.length > 0){
+                 var _retinaConfig = _getSpritesmithConfig(_retinaObject.slice);
+                 _createRetinaSpriteHandler(_retinaConfig,function(result){
+                    var _spriteProperties = result.properties;
+                    if(_spriteProperties.width % 2 == 1){
+                        gutil.log("[Error] : @2x slice image size must be even number, Please check it!");
+                    }else{
+                        for(var key in result.coordinates){
+                            _retinaObject.slicekey[key].code = result.coordinates[key];
+                        }
                     }
-                }
-                _retinaCSSString = _updateRetinaStyleHandler(_cssString,_retinaObject,_spriteProperties);
-                //console.log(_retinaCSSString);
-                file.contents = new Buffer(_retinaCSSString);
+                    _retinaCSSString = _updateRetinaStyleHandler(_cssString,_retinaObject,_spriteProperties);
+                    //console.log(_retinaCSSString);
+                    file.contents = new Buffer(_retinaCSSString);
+                    _that.push(file);
+                    cb();
+                })
+            }else{
+                file.contents = new Buffer(_cssString);
                 _that.push(file);
                 cb();
-            })
+            }
         });
     });
 };
