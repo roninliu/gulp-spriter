@@ -249,7 +249,7 @@ module.exports = function(opt){
         var _cssString;
         var _retinaCSSString;
         var _sliceObject = _getSliceObjectHandler(String(file.contents));
-        console.log(_sliceObject);
+      
         var _sliceImagePath = _getSliceImagePathHandler(_sliceObject.img);
         var _config =_getSpritesmithConfig(_sliceImagePath);
         _createSpriteHandler(_config,function(position){
