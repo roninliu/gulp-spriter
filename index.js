@@ -19,12 +19,12 @@ var fileExists = require('file-exists');
 module.exports = function(opt){
     /**
      * [默认参数：必须]
-     * outname:输入的雪碧图文件名
-     * inpath：输入的切片文件位置
-     * outpath：输出雪碧图位置
+     * sprite:输入生成雪碧图文件名
+     * slice：输入的切片文件位置
+     * outpath：输出雪碧图存放位置
      */
-    var _outSpriteName = opt.outname;
-    var _inSlicePath = opt.inpath;
+    var _outSpriteName = opt.sprite;
+    var _inSlicePath = opt.slice;
     var _outSpritePath = opt.outpath;
     var _rootPath = _inSlicePath.slice(0,_inSlicePath.lastIndexOf("/"));
 
@@ -36,7 +36,7 @@ module.exports = function(opt){
     var _getSpritesmithConfig = function(imagePath){
         var _config = {
             src:imagePath,
-            engine:"gm",
+            engine:"pixelsmith",
             format:"png",
             algorithm:"binary-tree"
         }
@@ -118,10 +118,11 @@ module.exports = function(opt){
      * @return {[type]}           [返回更新后的样式文件string]
      */
     var _updateStyleHandler = function(sliceCode,data){
+    	console.log(_outSpritePath);
         var _slice;
         for(var key in sliceCode){
             _slice = sliceCode[key];
-            var _code = "background-image: url(..";
+            var _code = "background-image: url(.";
                 _code += _outSpritePath.slice(_outSpritePath.lastIndexOf("/"),_outSpritePath.length);
                 _code += "/";
                 _code += _outSpriteName;
@@ -217,7 +218,7 @@ module.exports = function(opt){
             for(var key in _tmpSlice){
                 _sprite = _tmpSlice[key].code;
                 _retinaCSSCode += _tmpSlice[key].className;
-                _retinaCSSCode += "{background-image:url(..";
+                _retinaCSSCode += "{background-image:url(.";
                 _retinaCSSCode += _outSpritePath.slice(_outSpritePath.lastIndexOf("/"),_outSpritePath.length);
                 _retinaCSSCode += "/";
                 _retinaCSSCode += _outSpriteName.replace(".png","@2x.png")+");";
@@ -248,6 +249,7 @@ module.exports = function(opt){
         var _cssString;
         var _retinaCSSString;
         var _sliceObject = _getSliceObjectHandler(String(file.contents));
+        console.log(_sliceObject);
         var _sliceImagePath = _getSliceImagePathHandler(_sliceObject.img);
         var _config =_getSpritesmithConfig(_sliceImagePath);
         _createSpriteHandler(_config,function(position){

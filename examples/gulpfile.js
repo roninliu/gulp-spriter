@@ -9,9 +9,9 @@ var sprite = require("../");
 gulp.task("sprite",function(){
   return gulp.src("src/css/style.css")
         .pipe(sprite({
-        	outname:"sprite.png",
-        	inpath:"./src/slice",
-        	outpath:"./src/sprite"
+        	sprite:"sprite.png",
+        	slice:"./src/css/slice",
+        	outpath:"./src/debug-css/sprite"
         }))
         .pipe(gulp.dest("./src/debug-css"));
 })
