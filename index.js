@@ -5,7 +5,8 @@
  * opt = {
  *     outname:"sprite.png",
  *     inpath:"./src/slice",
- *     outpath:"./build/sprite"
+ *     outpath:"./build/sprite",
+ *     imgPathFromCss: "../images"
  * }
  */
 var PLUGIN_NAME = "gulp-spriter";
@@ -27,6 +28,7 @@ module.exports = function(opt){
     var _inSlicePath = opt.slice;
     var _outSpritePath = opt.outpath;
     var _rootPath = _inSlicePath.slice(0,_inSlicePath.lastIndexOf("/"));
+    var _imgPathFromCss = opt.imgPathFromCss;  // 设定生成的css文件里图片的引用路径
 
     /**
      * [_getSpritesmithConfig 获取spritesmith的配置]
@@ -122,8 +124,8 @@ module.exports = function(opt){
         var _slice;
         for(var key in sliceCode){
             _slice = sliceCode[key];
-            var _code = "background-image: url(.";
-                _code += _outSpritePath.slice(_outSpritePath.lastIndexOf("/"),_outSpritePath.length);
+            var _code = "background-image: url(";
+                _code += _imgPathFromCss;
                 _code += "/";
                 _code += _outSpriteName;
                 _code += ");";
