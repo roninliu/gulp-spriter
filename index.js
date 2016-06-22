@@ -16,6 +16,7 @@ var gutil = require('gulp-util');
 var fs = require('fs-extra');
 var spritesmith = require('spritesmith');
 var fileExists = require('file-exists');
+var css = require('css');
 
 
 module.exports = function(opt) {
@@ -26,9 +27,9 @@ module.exports = function(opt) {
      * outpath：输出雪碧图存放位置
      */
     var _outSpriteName = opt.sprite;
-    var _inSlicePath = opt.slice;  //   ./src/slice
-    var _outSpritePath = opt.outpath;  //  ./build/sprite 
-    var _rootPath = _inSlicePath.slice(0, _inSlicePath.lastIndexOf("/")); //  ./src
+    var _inSlicePath = opt.slice;  //   ./src/image/slice
+    var _outSpritePath = opt.outpath;  //  ./build/image 
+    var _rootPath = _inSlicePath.slice(0, _inSlicePath.lastIndexOf("/")); //  ./src/image
     var _imgPathFromCss = opt.imgPathFromCss;
     var _isH5 = opt.isH5 || false;
 
@@ -55,6 +56,7 @@ module.exports = function(opt) {
     var _getSliceObjectHandler = function(filestring) {
         var _sliceObject;
         var _regex = new RegExp('background-image:[\\s]*url\\(["\']?(?!http[s]?|/)[^;]*?(slice[\\w\\d\\s!./\\-\\_@]*\\.[\\w?#]+)["\']?\\)[^;}]*;?', 'ig');
+        var _regSize = new RegExp('background-size:', 'gi')
         var _sliceCodeList = filestring.match(_regex);
         var _pathToResource;
         var _sliceImgUrlList = [];
@@ -68,7 +70,8 @@ module.exports = function(opt) {
         }
         _sliceObject = {
             img: _sliceImgUrlList,
-            list: _sliceList
+            list: _sliceList,
+            imgOrigin: _sliceCodeList
         }
         return _sliceObject;
     }
@@ -100,6 +103,7 @@ module.exports = function(opt) {
                 } else {
                     if (callback !== undefined) {
                         var _resultPosition = result.coordinates;
+                        var _resultProperties = result.properties;
                         fs.writeFileSync(_outSpriteName, result.image, "binary");
                         fs.move(_outSpriteName, _outSpritePath + "/" + _outSpriteName, {
                             clobber: true
@@ -110,7 +114,7 @@ module.exports = function(opt) {
                                 gutil.log(gutil.colors.green("[Successful]"), gutil.colors.yellow("[Done]:" + _outSpriteName + " Create Successful"))
                             }
                         });
-                        callback(_resultPosition);
+                        callback(_resultPosition, _resultProperties);
                     } else {
                         gutil.log("[Error] Create Sprite callback is required!");
                     }
@@ -133,10 +137,15 @@ module.exports = function(opt) {
                 _code += "/";
                 _code += _outSpriteName;
                 _code += ");";
-                _code += "background-position: -";
+                _code += '\n'
+                _code += "  background-position: -";
                 _code += _isH5 ? _slice.x / 2 : _slice.x;
                 _code += "px -";
                 _code += _isH5 ? _slice.y / 2 : _slice.y;
+                _code += "px;";
+                _code += '\n';
+                _code += "  background-size: ";
+                _code += _isH5 ? (_slice.appearance.width / 2 + 'px ' + _slice.appearance.height / 2) : (_slice.appearance.width + 'px ' + _slice.appearance.height);
                 _code += "px;";
                 data = data.replace(_slice.code, _code);
             }
@@ -241,6 +250,30 @@ module.exports = function(opt) {
             css = css + _retinaCSSCode;
             return css;
         }
+
+        /**
+         * [_getFixedFileContent 将有sprit出现的css部分的background-size删除]
+         * @param  {[array]} imgOriginList [css样式表中的background-image集合]
+         * @return {[string]}               [返回新的css样式表字符]
+         */
+    var _getFixedFileContent = function (imgOriginList, fileString) {
+        var cssObj = css.parse(fileString);
+        // console.log(cssObj.stylesheet.rules)
+        var arr = [];
+        cssObj.stylesheet.rules.forEach(function (jtem, j) {
+            jtem.declarations.forEach(function (ztem, z) {
+                if (ztem.property === 'background-image' && ztem.value.valueOf(/slice/gi) !== -1) {
+                    jtem.declarations.forEach(function (item, i) {
+                        if (item.property === 'background-size') {
+                            jtem.declarations.splice(i, 1);
+                        }
+                    })
+                }
+            })
+        })
+        return css.stringify(cssObj);
+    }
+
         /**
          * 插件具体干事情的在这里
          */
@@ -260,7 +293,8 @@ module.exports = function(opt) {
 
         var _sliceImagePath = _getSliceImagePathHandler(_sliceObject.img);
         var _config = _getSpritesmithConfig(_sliceImagePath);
-        _createSpriteHandler(_config, function(position) {
+        var _fixedFileContent = _getFixedFileContent(_sliceObject.imgOrigin, String(file.contents));
+        _createSpriteHandler(_config, function(position, appearance) {
             var _sliceCode = [];
             for (var key in position) {
                 var newKey = key;
@@ -269,9 +303,13 @@ module.exports = function(opt) {
                 }
                 _sliceCode[newKey] = position[key];
                 _sliceCode[newKey].code = _sliceObject.list[newKey];
+                _sliceCode[newKey].appearance = {
+                    width: appearance.width,
+                    height: appearance.height
+                };
             }
-            _cssString = _updateStyleHandler(_sliceCode, String(file.contents));
-            //console.log(_cssString);
+            _cssString = _updateStyleHandler(_sliceCode, _fixedFileContent);
+            // console.log(_cssString);
             var _retinaObject = _getRetinaClassSliceHandler(String(file.contents));
             if (_retinaObject.slice.length > 0) {
                 var _retinaConfig = _getSpritesmithConfig(_retinaObject.slice);

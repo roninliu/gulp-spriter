@@ -1,6 +1,6 @@
 {
   "name": "gulp-spriter-ny",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "the plugin to help UI Engineer creating css sprite",
   "main": "index.js",
   "scripts": {
@@ -11,11 +11,12 @@
     "url": "https://github.com/fromIRIS/gulp-spriter.git"
   },
   "dependencies": {
-    "gulp-util": "^3.0.7",
-    "through2": "^2.0.0",
-    "fs-extra": "^0.26.1",
+    "css": "^2.2.1",
     "file-exists": "^1.0.0",
-    "spritesmith": "^2.0.1"
+    "fs-extra": "^0.26.1",
+    "gulp-util": "^3.0.7",
+    "spritesmith": "^2.0.1",
+    "through2": "^2.0.0"
   },
   "devDependencies": {
     "gulp": "^3.9.0"
